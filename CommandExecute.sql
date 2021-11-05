@@ -9,7 +9,7 @@ END
 GO
 ALTER PROCEDURE [dbo].[CommandExecute]
 
-@DatabaseContext nvarchar(max),
+@DatabaseContext nvarchar(max) = NULL,
 @Command nvarchar(max),
 @CommandType nvarchar(max),
 @Mode int,
@@ -26,7 +26,7 @@ ALTER PROCEDURE [dbo].[CommandExecute]
 @LockMessageSeverity int = 16,
 @ExecuteAsUser nvarchar(max) = NULL,
 @LogToTable nvarchar(max),
-@Execute nvarchar(max)
+@Execute nvarchar(max)wi
 
 AS
 
@@ -38,6 +38,10 @@ BEGIN
   --// GitHub:  https://github.com/olahallengren/sql-server-maintenance-solution                  //--
   --// Version: 2020-12-31 18:58:56                                                               //--
   ----------------------------------------------------------------------------------------------------
+  /*
+	Modifications in SQLozano's version
+	#SQLozano001: @DatabaseContext is no longer a mandatory parameter: if not provided it will default to DB_NAME()
+  */
 
   SET NOCOUNT ON
 
@@ -56,6 +60,8 @@ BEGIN
   DECLARE @CurrentSeverity int
   DECLARE @CurrentState int
 
+  /* #SQLozano001: If no @DatabaseContext value is provided, use DB_NAME() */
+  IF (@DatabaseContext IS NULL) SET @DatabaseContext = DB_NAME()
   DECLARE @sp_executesql nvarchar(max) = QUOTENAME(@DatabaseContext) + '.sys.sp_executesql'
 
   DECLARE @StartTime datetime2
@@ -101,8 +107,7 @@ BEGIN
   ----------------------------------------------------------------------------------------------------
   --// Check input parameters                                                                     //--
   ----------------------------------------------------------------------------------------------------
-
-  IF @DatabaseContext IS NULL OR NOT EXISTS (SELECT * FROM sys.databases WHERE name = @DatabaseContext)
+  IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = @DatabaseContext)
   BEGIN
     INSERT INTO @Errors ([Message], Severity, [State])
     SELECT 'The value for the parameter @DatabaseContext is not supported.', 16, 1
